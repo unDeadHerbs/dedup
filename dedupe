@@ -4,7 +4,6 @@ import os
 import hashlib
 import argparse
 import re
-# Some todos for when this has a python env
 from tqdm import tqdm
 
 def find_duplicates(folder):
