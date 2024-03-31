@@ -115,6 +115,7 @@ def main():
             if len(delete) >= len(duplicate_group):
                 print("WARNING: tried to delete everything, skipping")
                 print("List of paths was:", delete)
+                pbar.update(1)
                 continue
             to_delete.extend(delete)
             pbar.update(1)
