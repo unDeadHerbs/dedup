@@ -78,6 +78,10 @@ def filter_files(file_list):
     for i in range(1,4):
         pattern_filter("[0-9]+",lambda n:str(int(n.group(0))-i))
 
+    # If two files have the same name but one has less redundant spaces
+    pattern_filter("  ",' ')
+
+    # TODO: If two files have the same name but one has more actual spaces
     # TODO: if two files have the same name except one has a more specific path, check the list of preferred paths
     # TODO: if one file has a name which is all numbers and another has one with text, delete the one with numbers
 
