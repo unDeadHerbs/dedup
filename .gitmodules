@@ -1,0 +1,3 @@
+[submodule ".make_tools"]
+	path = .make_tools
+	url = git@github.com:unDeadHerbs/.make_tools.git

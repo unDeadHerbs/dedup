@@ -1,18 +1,19 @@
-#! /usr/bin/env python
+#! /usr/bin/env -S /bin/sh -c "exec \$(dirname "\$0")/.virtualenv/bin/python -E "\$0""
+# Forgive the terrible shebang line, I didn't want to have to wrap this in a script, as the program is so short.
 import os
 import hashlib
 import argparse
 import re
 # Some todos for when this has a python env
-# TODO(progress): from tqdm import tqdm
+from tqdm import tqdm
 
 def find_duplicates(folder):
     hash_map = {}
     duplicates = []
 
     def traverse(folder):
-        # TODO(progress): total_files = sum([len(files) for _, _, files in os.walk(folder)])
-        # TODO(progress): pbar = tqdm(total=total_files, desc="Scanning", unit="file")
+        total_files = sum([len(files) for _, _, files in os.walk(folder)])
+        pbar = tqdm(total=total_files, desc="Scanning", unit="file")
 
         for root, dirs, files in os.walk(folder):
             for file in files:
@@ -25,8 +26,8 @@ def find_duplicates(folder):
                         else:
                             hash_map[file_hash] = len(duplicates)
                             duplicates.append([file_path])
-                # TODO(progress): pbar.update(1)
-        # TODO(progress): pbar.close()
+                pbar.update(1)
+        pbar.close()
     traverse(folder)
     return duplicates
 
@@ -99,7 +100,9 @@ def main():
 
     folder = args.folder
     duplicates = find_duplicates(folder)
+    count_dups = sum([len(d)>1 for d in duplicates])
 
+    pbar = tqdm(total=count_dups, desc="filtering", unit="path")
     for duplicate_group in duplicates:
         if len(duplicate_group)>1:
             print('Found Duplicates: ',duplicate_group)
@@ -109,6 +112,9 @@ def main():
                 print("List of paths was:", delete)
                 continue
             print('delete:',delete)
+            pbar.update(1)
+    pbar.close()
+
 
 if __name__ == "__main__":
     main()
