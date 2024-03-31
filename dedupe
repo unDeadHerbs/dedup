@@ -1,0 +1,114 @@
+#! /usr/bin/env python
+import os
+import hashlib
+import argparse
+import re
+# Some todos for when this has a python env
+# TODO(progress): from tqdm import tqdm
+
+def find_duplicates(folder):
+    hash_map = {}
+    duplicates = []
+
+    def traverse(folder):
+        # TODO(progress): total_files = sum([len(files) for _, _, files in os.walk(folder)])
+        # TODO(progress): pbar = tqdm(total=total_files, desc="Scanning", unit="file")
+
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                file_path = os.path.join(root, file)
+                if os.path.isfile(file_path):
+                    with open(file_path, 'rb') as f:
+                        file_hash = hashlib.sha256(f.read()).hexdigest()
+                        if file_hash in hash_map:
+                            duplicates[hash_map[file_hash]].append(file_path)
+                        else:
+                            hash_map[file_hash] = len(duplicates)
+                            duplicates.append([file_path])
+                # TODO(progress): pbar.update(1)
+        # TODO(progress): pbar.close()
+    traverse(folder)
+    return duplicates
+
+def delete_files(file_list):
+    """
+    Deletes a list of files.
+
+    Args:
+    - file_list (list): A list of file paths to delete.
+    """
+    for file_path in file_list:
+        try:
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
+        except Exception as e:
+            print(f"Failed to delete {file_path}: {e}")
+
+def filter_files(file_list):
+    keep=file_list.copy()
+    delete=[]
+
+    def sub_each(pat, sub, s):
+        """Generate a list of all possible strings obtained from
+        replacing the pattern with the substitution in the input
+        string (non-recursive).
+
+        """
+        patc=re.compile(pat)
+        matches=patc.finditer(s)
+        generated=[]
+        for match in matches:
+            if type(sub)==type(''):
+                r=s[:match.start()] + sub + s[match.end():]
+            else:
+                r=s[:match.start()] + sub(match) + s[match.end():]
+            generated.append(r)
+        return generated
+    
+    def pattern_filter(pat,sub):
+        # Modifying the list while iterating through it is safe here
+        # as the check in the loop body looks at the updated state and
+        # the iterators moving though the old list is ok.
+        for f in keep:
+            patc = re.compile(pat)
+            if patc.search(f):
+                names_without = sub_each(pat,sub,f)
+                if any([n in keep for n in names_without]):
+                    keep.remove(f)
+                    delete.append(f)
+    
+    # If two files have the same name but one contains ' (n)', delete the one containing
+    pattern_filter("[0-9]+",'')
+    pattern_filter(" *[0-9]+",'')
+    pattern_filter("[(][0-9]+[)]",'')
+    pattern_filter(" +[(][0-9]+[)]",'')
+
+    # If two files have the same name except for numbers, delete the larger number one (lexicographically later)
+    for i in range(1,4):
+        pattern_filter("[0-9]+",lambda n:str(int(n.group(0))-i))
+
+    # TODO: if two files have the same name except one has a more specific path, check the list of preferred paths
+    # TODO: if one file has a name which is all numbers and another has one with text, delete the one with numbers
+
+    return delete
+            
+def main():
+    parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
+    parser.add_argument('folder', nargs='?', default=os.getcwd(), help='folder to search for duplicates (default: current directory)')
+    args = parser.parse_args()
+
+    folder = args.folder
+    duplicates = find_duplicates(folder)
+
+    for duplicate_group in duplicates:
+        if len(duplicate_group)>1:
+            print('Found Duplicates: ',duplicate_group)
+            delete = filter_files(duplicate_group)
+            if len(delete) >= len(duplicate_group):
+                print("WARNING: tried to delete everything, skipping")
+                print("List of paths was:", delete)
+                continue
+            print('delete:',delete)
+
+if __name__ == "__main__":
+    main()
