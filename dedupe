@@ -10,24 +10,22 @@ def find_duplicates(folder):
     hash_map = {}
     duplicates = []
 
-    def traverse(folder):
-        total_files = sum([len(files) for _, _, files in os.walk(folder)])
-        pbar = tqdm(total=total_files, desc="Scanning", unit="file")
+    total_files = sum([len(files) for _, _, files in os.walk(folder)])
+    pbar = tqdm(total=total_files, desc="Scanning", unit="file")
 
-        for root, dirs, files in os.walk(folder):
-            for file in files:
-                file_path = os.path.join(root, file)
-                if os.path.isfile(file_path):
-                    with open(file_path, 'rb') as f:
-                        file_hash = hashlib.sha256(f.read()).hexdigest()
-                        if file_hash in hash_map:
-                            duplicates[hash_map[file_hash]].append(file_path)
-                        else:
-                            hash_map[file_hash] = len(duplicates)
-                            duplicates.append([file_path])
-                pbar.update(1)
-        pbar.close()
-    traverse(folder)
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if os.path.isfile(file_path):
+                with open(file_path, 'rb') as f:
+                    file_hash = hashlib.sha256(f.read()).hexdigest()
+                    if file_hash in hash_map:
+                        duplicates[hash_map[file_hash]].append(file_path)
+                    else:
+                        hash_map[file_hash] = len(duplicates)
+                        duplicates.append([file_path])
+            pbar.update(1)
+    pbar.close()
     return duplicates
 
 def delete_files(file_list):
