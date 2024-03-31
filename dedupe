@@ -115,6 +115,8 @@ def main():
             pbar.update(1)
     pbar.close()
     print("Found",len(to_delete),"file(s) to remove.")
+    for f in to_delete:
+        print("-",f)
 
 
 if __name__ == "__main__":
