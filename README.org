@@ -1,0 +1,1 @@
+Inspired by [[https://github.com/adrianlopezroche/fdupes][fdupes]], I'd like a progam that removed duplicate files; but, I'm lazy and want to let *safely* it run under chron.
