@@ -73,9 +73,11 @@ def filter_files(file_list):
             patc = re.compile(pat)
             if patc.search(f):
                 names_without = sub_each(pat,sub,f)
-                if any([n in keep for n in names_without]):
-                    keep.remove(f)
-                    delete.append(f)
+                for n in names_without:
+                    if n in keep:
+                        keep.remove(f)
+                        delete.append((n,f))
+                        break
     
     # If two files have the same name but one contains ' (n)', delete the one containing
     pattern_filter("[0-9]+",'')
