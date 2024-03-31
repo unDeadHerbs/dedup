@@ -30,20 +30,6 @@ def find_duplicates(folder,pat):
     pbar.close()
     return duplicates
 
-def delete_files(file_list):
-    """
-    Deletes a list of files.
-
-    Args:
-    - file_list (list): A list of file paths to delete.
-    """
-    for file_path in file_list:
-        try:
-            os.remove(file_path)
-            print(f"Deleted: {file_path}")
-        except Exception as e:
-            print(f"Failed to delete {file_path}: {e}")
-
 def filter_files(file_list):
     keep=file_list.copy()
     delete=[]
@@ -93,7 +79,23 @@ def filter_files(file_list):
     # TODO: if one file has a name which is all numbers and another has one with text, delete the one with numbers
 
     return delete
-            
+
+def delete_files(files):
+    """
+    Deletes a list of files.
+
+    Args:
+    - files (list): A list of file paths to delete.
+    """
+    pbar=tqdm(total=len(files), desc="Deleting", unit="path")
+    for keep,file_path in files:
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print(f"Failed to delete {file_path}: {e}")
+        pbar.update(1)
+    pbar.close()
+
 def main():
     parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
     parser.add_argument('folder', nargs='?', default=os.getcwd(), help='folder to search for duplicates (default: current directory)')
@@ -118,9 +120,9 @@ def main():
             pbar.update(1)
     pbar.close()
     print("Found",len(to_delete),"file(s) to remove.")
-    for f in to_delete:
-        print("-",f)
-
+    #for f in to_delete:
+    #    print("-",f)
+    delete_files(to_delete)
 
 if __name__ == "__main__":
     main()
