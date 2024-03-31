@@ -88,7 +88,7 @@ def delete_files(files):
     - files (list): A list of file paths to delete.
     """
     pbar=tqdm(total=len(files), desc="Deleting", unit="path")
-    for keep,file_path in files:
+    for file_path in files:
         try:
             os.remove(file_path)
         except Exception as e:
@@ -121,9 +121,10 @@ def main():
             pbar.update(1)
     pbar.close()
     print("Found",len(to_delete),"file(s) to remove.")
-    #for f in to_delete:
-    #    print("-",f)
-    delete_files(to_delete)
+    delete_files([dell for keep,dell in to_delete])
+    for f in to_delete:
+        print("-",f)
+
 
 if __name__ == "__main__":
     main()
