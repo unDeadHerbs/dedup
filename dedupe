@@ -54,7 +54,8 @@ def filter_files(file_list):
     def pattern_filter(pat,sub):
         # Modifying the list while iterating through it is safe here
         # as the check in the loop body looks at the updated state and
-        # the iterators moving though the old list is ok.
+        # the iterators moving though the old list will never look at
+        # a deleted element.
         for f in keep:
             patc = re.compile(pat)
             if patc.search(f):
