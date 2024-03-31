@@ -11,7 +11,7 @@ def find_duplicates(folder,pat):
     duplicates = []
 
     total_files = sum([len(files) for _, _, files in os.walk(folder)])
-    pbar = tqdm(total=total_files, desc="Scanning", unit="file")
+    pbar = tqdm(total=total_files, desc="Scanning  ", unit="file")
     patc = re.compile(pat)
 
     for root, dirs, files in os.walk(folder):
@@ -90,7 +90,7 @@ def delete_files(files):
     Args:
     - files (list): A list of file paths to delete.
     """
-    pbar=tqdm(total=len(files), desc="Deleting", unit="path")
+    pbar=tqdm(total=len(files), desc="Deleting  ", unit="path")
     for file_path in files:
         try:
             os.remove(file_path)
@@ -110,7 +110,7 @@ def main():
     duplicates = find_duplicates(folder,pat)
     count_dups = sum([len(d)>1 for d in duplicates])
 
-    pbar = tqdm(total=count_dups, desc="Filtering", unit="path")
+    pbar = tqdm(total=count_dups, desc="Filtering ", unit="path")
     to_delete = []
     for duplicate_group in duplicates:
         if len(duplicate_group)>1:
