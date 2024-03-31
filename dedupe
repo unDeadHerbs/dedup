@@ -1,4 +1,4 @@
-#! /usr/bin/env -S /bin/sh -c "exec \$(dirname "\$0")/.virtualenv/bin/python -E "\$0" "\$@""
+#! /usr/bin/env -S /bin/sh -xc "exec \$(dirname \$(realpath "\$0"))/.virtualenv/bin/python -E "\$0" "\$@""
 # Forgive the terrible shebang line, I didn't want to have to wrap this in a script, as the program is so short.
 import os
 import hashlib
