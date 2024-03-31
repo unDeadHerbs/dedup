@@ -17,7 +17,9 @@ def find_duplicates(folder,pat):
     for root, dirs, files in os.walk(folder):
         for file in files:
             file_path = os.path.join(root, file)
-            if not patc.search(file_path): continue
+            if not patc.search(file_path):
+                pbar.update(1)
+                continue
             if os.path.isfile(file_path):
                 with open(file_path, 'rb') as f:
                     file_hash = hashlib.sha256(f.read()).hexdigest()
