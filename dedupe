@@ -96,7 +96,7 @@ def filter_files(file_list):
     # TODO: If two files have the same name except one has a more specific path, check the list of preferred paths
     # TODO: If two have the same proper name but one is both in a sub directory and has an older date, remove newer
 
-    return delete
+    return (keep,delete)
 
 def delete_files(files):
     """
@@ -127,22 +127,28 @@ def main():
 
     pbar = tqdm(total=count_dups, desc="Filtering ", unit="path")
     to_delete = []
+    kept = []
     for duplicate_group in duplicates:
         if len(duplicate_group)>1:
-            delete = filter_files(duplicate_group)
+            keep, delete = filter_files(duplicate_group)
             if len(delete) >= len(duplicate_group):
                 print("WARNING: tried to delete everything, skipping")
                 print("List of paths was:", delete)
                 pbar.update(1)
                 continue
             to_delete.extend(delete)
+            kept.append(keep)
             pbar.update(1)
     pbar.close()
-    print("Found",len(to_delete),"file(s) to remove.")
-    delete_files([dell for keep,dell in to_delete])
-    for f in to_delete:
-        print("-",f)
-
+    if len(to_delete):
+        delete_files([dell for keep,dell in to_delete])
+        print("Removed",len(to_delete),"file(s)")
+        for f in to_delete:
+            print("-",f)
+    else:
+        print("Found no files to remove.")
+    # TODO: Merge file information
+    # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
 
 if __name__ == "__main__":
     main()
