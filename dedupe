@@ -79,9 +79,22 @@ def filter_files(file_list):
     # If two files have the same name but one has less redundant spaces
     pattern_filter("  ",' ')
 
+    # If one file has a name which is all numbers and another has one with text, delete the one with numbers
+    for f in keep:
+        all_nums = re.compile('[-0-9_., ]*$')
+        base_name = ''.join(f.split('/')[-1].split('.')[:-1])
+        if all_nums.match(base_name):
+            for f2 in keep:
+                base_name2 = ''.join(f2.split('/')[-1].split('.')[:-1])
+                if not all_nums.match(base_name2):
+                    keep.remove(f)
+                    delete.append((f2,f))
+                    break
+    
+    # TODO: If two files differ only by the date in their name, keep the older one
     # TODO: If two files have the same name but one has more actual spaces
-    # TODO: if two files have the same name except one has a more specific path, check the list of preferred paths
-    # TODO: if one file has a name which is all numbers and another has one with text, delete the one with numbers
+    # TODO: If two files have the same name except one has a more specific path, check the list of preferred paths
+    # TODO: If two have the same proper name but one is both in a sub directory and has an older date, remove newer
 
     return delete
 
