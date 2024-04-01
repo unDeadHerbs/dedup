@@ -68,7 +68,7 @@ def filter_files(file_list):
                         break
     
     # If two files have the same name but one contains ' (n)', delete the one containing
-    pattern_filter("[0-9]+",'')
+    pattern_filter("[1-9][0-9]*",'')
     pattern_filter(" *[0-9]+",'')
     pattern_filter("[(][0-9]+[)]",'')
     pattern_filter(" +[(][0-9]+[)]",'')
@@ -93,39 +93,31 @@ def filter_files(file_list):
                     break
     
     # TODO: If two files differ only by the date in their name, keep the older one
+    date = re.compile('(19[7-9]|20[01])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
+    for f in keep:
+        base_name = ''.join(f.split('/')[-1].split('.')[:-1])
+        path = ''.join(f.split('/')[:-1])
+        if date.search(base_name):
+            # Using a dummy token to check that the dates are in the same place in both.
+            name_no_date = date.sub('YDYD',base_name)
+            for f2 in keep:
+                n2 = ''.join(f2.split('/')[-1].split('.')[:-1])
+                p2 = ''.join(f2.split('/')[:-1])
+                if path == p2:
+                    nd2 = date.sub('YDYD',n2)
+                    if name_no_date == nd2:
+                        if n2 < base_name:
+                            keep.remove(f)
+                            delete.append((f2,f))
+                            break
     # TODO: If two files have the same name but one has more actual spaces
     # TODO: If two files have the same name except one has a more specific path, check the list of preferred paths
     # TODO: If two have the same proper name but one is both in a sub directory and has an older date, remove newer
 
     return (keep,delete)
 
-def delete_files(files):
-    """
-    Deletes a list of files.
-
-    Args:
-    - files (list): A list of file paths to delete.
-    """
-    pbar=tqdm(total=len(files), desc="Deleting  ", unit="path")
-    for file_path in files:
-        try:
-            os.remove(file_path)
-        except Exception as e:
-            print(f"Failed to delete {file_path}: {e}")
-        pbar.update(1)
-    pbar.close()
-
-def main():
-    parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
-    parser.add_argument('pattern', nargs='?', default='', help='only look at files containing the pattern')
-    parser.add_argument('folder', nargs='?', default=os.getcwd(), help='folder to search for duplicates (default: current directory)')
-    args = parser.parse_args()
-
-    folder = args.folder
-    pat = args.pattern
-    duplicates = find_duplicates(folder,pat)
+def filter_groups(duplicates):
     count_dups = sum([len(d)>1 for d in duplicates])
-
     pbar = tqdm(total=count_dups, desc="Filtering ", unit="path")
     to_delete = []
     kept = []
@@ -141,6 +133,41 @@ def main():
             kept.append(keep)
             pbar.update(1)
     pbar.close()
+    return (kept,to_delete)
+
+def delete_files(files):
+    """
+    Deletes a list of files.
+
+    Args:
+    - files (list): A list of file paths to delete.
+    """
+    pbar=tqdm(total=len(files), desc="Deleting  ", unit="path")
+    for file_path in files:
+        try:
+            pass#os.remove(file_path)
+        except Exception as e:
+            print(f"Failed to delete {file_path}: {e}")
+        pbar.update(1)
+    pbar.close()
+
+def merge_names(files):
+    """Take a set of file names and find new names that have more information packed into them.
+
+    e.g. The two files `/a/date_c` and `/a/b/c` can become `/a/b/date_c`.
+    """
+    pass
+    
+def main():
+    parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
+    parser.add_argument('pattern', nargs='?', default='', help='only look at files containing the pattern')
+    parser.add_argument('folder', nargs='?', default=os.getcwd(), help='folder to search for duplicates (default: current directory)')
+    args = parser.parse_args()
+
+    folder = args.folder
+    pat = args.pattern
+    duplicates = find_duplicates(folder,pat)
+    kept, to_delete = filter_groups(duplicates)
     if len(to_delete):
         delete_files([dell for keep,dell in to_delete])
         print("Removed",len(to_delete),"file(s)")
