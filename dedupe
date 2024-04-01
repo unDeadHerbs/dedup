@@ -10,16 +10,14 @@ def find_duplicates(folder,pat):
     hash_map = {}
     duplicates = []
 
-    total_files = sum([len(files) for _, _, files in os.walk(folder)])
-    pbar = tqdm(total=total_files, desc="Scanning  ", unit="file")
     patc = re.compile(pat)
-
+    total_files = sum([1 for _, _, files in os.walk(folder) for f in files if patc.search(f)])
+    pbar = tqdm(total=total_files, desc="Scanning  ", unit="file")
+    
     for root, dirs, files in os.walk(folder):
         for file in files:
             file_path = os.path.join(root, file)
-            if not patc.search(file_path):
-                pbar.update(1)
-                continue
+            if not patc.search(file_path): continue
             if os.path.isfile(file_path):
                 with open(file_path, 'rb') as f:
                     file_hash = hashlib.sha256(f.read()).hexdigest()
