@@ -128,7 +128,7 @@ def delete_files(files):
     pbar=tqdm(total=len(files), desc="Deleting  ", unit="path")
     for file_path in files:
         try:
-            pass#os.remove(file_path)
+            os.remove(file_path)
         except Exception as e:
             print(f"Failed to delete {file_path}: {e}")
         pbar.update(1)
