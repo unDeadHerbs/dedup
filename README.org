@@ -1,1 +1,5 @@
+* Intelligent Automated File Deduplication
+
 Inspired by [[https://github.com/adrianlopezroche/fdupes][fdupes]], I'd like a progam that removed duplicate files; but, I'm lazy and want to let *safely* it run under chron.
+
+This program searches in a given directory for files with the same hash and then checks their names to choose the one that is "best".
