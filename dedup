@@ -38,6 +38,7 @@ def filter_files(file_list):
 
     keep=file_list.copy()
     delete=[]
+    new=[]
 
     def sub_each(pat, sub, s):
         """Generate a list of all possible strings obtained from
@@ -66,7 +67,7 @@ def filter_files(file_list):
                         keep.remove(f)
                         delete.append((n,f))
                         break
-    
+                    
     # If two files have the same name but one contains ' (n)', delete the one containing
     pattern_filter("[1-9][0-9]*",'')
     pattern_filter(" *[0-9]+",'')
@@ -91,8 +92,7 @@ def filter_files(file_list):
                     keep.remove(f)
                     delete.append((f2,f))
                     break
-
-
+    
     # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
     # TODO: This date filter will expire in 2030, use the actual date to build this check.
     date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
@@ -116,20 +116,26 @@ def filter_files(file_list):
                             keep.remove(f)
                             delete.append((f2,f))
                             break
-
     # TODO: If two files have the same name but one has more actual spaces
-    # TODO: If two have the same proper name but one is both in a sub directory and has an older date, remove newer
+    # TODO: If two files have the same name except one has a more specific path, keep the deeper one
+    # TODO: If two files have the same stripped name and the second is in an export folder under the first
 
-    return (keep,delete)
+    # TODO: Add name merging
+    # - keep, delete, new, considered
+    # TODO: if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
+    # TODO: if two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
+    # - we can safely discard the date because the export presumable knows the real date.
+    return (keep,delete,new)
 
 def filter_groups(duplicates):
     count_dups = sum([len(d)>1 for d in duplicates])
     pbar = tqdm(total=count_dups, desc="Filtering ", unit="path")
     to_delete = []
     kept = []
+    make=[]
     for duplicate_group in duplicates:
         if len(duplicate_group)>1:
-            keep, delete = filter_files(duplicate_group)
+            keep, delete, new = filter_files(duplicate_group)
             if len(delete) >= len(duplicate_group):
                 print("WARNING: tried to delete everything, skipping")
                 print("List of paths was:", delete)
@@ -138,8 +144,9 @@ def filter_groups(duplicates):
             to_delete.extend(delete)
             kept.append(keep)
             pbar.update(1)
+            make.append((keep,new))
     pbar.close()
-    return (kept,to_delete)
+    return (kept,to_delete,make)
 
 def delete_files(files):
     """
@@ -173,7 +180,7 @@ def main():
     folder = args.folder
     pat = args.pattern
     duplicates = find_duplicates(folder,pat)
-    kept, to_delete = filter_groups(duplicates)
+    kept, to_delete, to_make = filter_groups(duplicates)
     if len(to_delete):
         delete_files([dell for keep,dell in to_delete])
         print("Removed",len(to_delete),"file(s)")
@@ -181,8 +188,9 @@ def main():
             print("-",f)
     else:
         print("Found no files to remove.")
-    # TODO: Merge file information
-    # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
+    for m in to_make:
+        if len(m[1]):
+            print("to make",m)
 
 if __name__ == "__main__":
     main()
