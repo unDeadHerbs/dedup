@@ -91,10 +91,33 @@ def filter_files(file_list):
                     keep.remove(f)
                     delete.append((f2,f))
                     break
-    
-    # TODO: If two files differ only by the date in their name, keep the older one
+
+
+    # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
+    # TODO: This date filter will expire in 2030, use the actual date to build this check.
+    date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
+    for f in keep:
+        base_name = ''.join(f.split('/')[-1].split('.')[:-1])
+        path = ''.join(f.split('/')[:-1])
+        if date.search(base_name):
+            # Using a dummy token to check that the dates are in the same place in both.
+            name_no_date = date.sub('YDYD',base_name)
+            for f2 in keep:
+                if f==f2: continue # don't look at the same file
+                n2 = ''.join(f2.split('/')[-1].split('.')[:-1])
+                p2 = ''.join(f2.split('/')[:-1])
+                # sub or same directory
+                if p2.startswith(path):
+                    nd2 = date.sub('YDYD',n2)
+                    # same proper name
+                    if name_no_date == nd2:
+                        # is older or same
+                        if n2 <= base_name:
+                            keep.remove(f)
+                            delete.append((f2,f))
+                            break
+
     # TODO: If two files have the same name but one has more actual spaces
-    # TODO: If two files have the same name except one has a more specific path, check the list of preferred paths
     # TODO: If two have the same proper name but one is both in a sub directory and has an older date, remove newer
 
     return (keep,delete)
