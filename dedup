@@ -201,6 +201,7 @@ def main():
     duplicates = find_duplicates(folder,pat)
     kept, to_delete, to_make = filter_groups(duplicates)
     if len(to_delete):
+        # TODO: Maybe add an assert here that keep and dell aren't equal?
         delete_files([dell for keep,dell in to_delete])
         print("Removed",len(to_delete),"file(s)")
         for f in to_delete:
