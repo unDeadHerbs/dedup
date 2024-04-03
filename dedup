@@ -39,6 +39,7 @@ def filter_files(file_list):
     keep=file_list.copy()
     delete=[]
     new=[]
+    changed=False
 
     def sub_each(pat, sub, s):
         """Generate a list of all possible strings obtained from
@@ -66,65 +67,83 @@ def filter_files(file_list):
                     if n in keep:
                         keep.remove(f)
                         delete.append((n,f))
+                        changed=True
                         break
-                    
-    # If two files have the same name but one contains ' (n)', delete the one containing
-    pattern_filter("[1-9][0-9]*",'')
-    pattern_filter(" *[0-9]+",'')
-    pattern_filter("[(][0-9]+[)]",'')
-    pattern_filter(" +[(][0-9]+[)]",'')
 
-    # If two files have the same name except for numbers, delete the larger number one (lexicographically later)
-    for i in range(1,4):
-        pattern_filter("[0-9]+",lambda n:str(int(n.group(0))-i))
+    changed=True
+    while changed:
+        changed = False
+        # If two files have the same name but one contains ' (n)', delete the one containing
+        pattern_filter("[1-9][0-9]*",'')
+        pattern_filter(" *[0-9]+",'')
+        pattern_filter("[(][0-9]+[)]",'')
+        pattern_filter(" +[(][0-9]+[)]",'')
 
-    # If two files have the same name but one has less redundant spaces
-    pattern_filter("  ",' ')
+        # If two files have the same name except for numbers, delete the larger number one (lexicographically later)
+        for i in range(1,4):
+            pattern_filter("[0-9]+",lambda n:str(int(n.group(0))-i))
 
-    # If one file has a name which is all numbers and another has one with text, delete the one with numbers
-    all_nums = re.compile('[-0-9_., ]*$')
-    for f in keep:
-        base_name = ''.join(f.split('/')[-1].split('.')[:-1])
-        if all_nums.match(base_name):
+        # If two files have the same name but one has less redundant spaces
+        pattern_filter("  ",' ')
+
+        # If one file has a name which is all numbers and another has one with text, delete the one with numbers
+        all_nums = re.compile('[-0-9_., ]*$')
+        for f in keep:
+            base_name = ''.join(f.split('/')[-1].split('.')[:-1])
+            if all_nums.match(base_name):
+                for f2 in keep:
+                    base_name2 = ''.join(f2.split('/')[-1].split('.')[:-1])
+                    if not all_nums.match(base_name2):
+                        keep.remove(f)
+                        delete.append((f2,f))
+                        changed=True
+                        break
+    
+        # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
+        # TODO: This date filter will expire in 2030, use the actual date to build this check.
+        date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
+        for f in keep:
+            base_name = ''.join(f.split('/')[-1].split('.')[:-1])
+            path = ''.join(f.split('/')[:-1])
+            if date.search(base_name):
+                # Using a dummy token to check that the dates are in the same place in both.
+                name_no_date = date.sub('YDYD',base_name)
+                for f2 in keep:
+                    if f==f2: continue # don't look at the same file
+                    n2 = ''.join(f2.split('/')[-1].split('.')[:-1])
+                    p2 = ''.join(f2.split('/')[:-1])
+                    # sub or same directory
+                    if p2.startswith(path):
+                        nd2 = date.sub('YDYD',n2)
+                        # same proper name
+                        if name_no_date == nd2:
+                            # is older or same
+                            if n2 <= base_name:
+                                keep.remove(f)
+                                delete.append((f2,f))
+                                changed=True
+                                break
+        # TODO: If two files have the same name but one has more actual spaces
+        # TODO: If two files have the same name except one has a more specific path, keep the deeper one
+        for f in keep:
+            base_name = f.split('/')[-1]
+            path = ''.join(f.split('/')[:-1])
             for f2 in keep:
-                base_name2 = ''.join(f2.split('/')[-1].split('.')[:-1])
-                if not all_nums.match(base_name2):
+                if f==f2: continue
+                n2 = f2.split('/')[-1]
+                p2 = ''.join(f2.split('/')[:-1])
+                if base_name == n2 and p2.startswith(path):
                     keep.remove(f)
                     delete.append((f2,f))
+                    changed=True
                     break
-    
-    # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
-    # TODO: This date filter will expire in 2030, use the actual date to build this check.
-    date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
-    for f in keep:
-        base_name = ''.join(f.split('/')[-1].split('.')[:-1])
-        path = ''.join(f.split('/')[:-1])
-        if date.search(base_name):
-            # Using a dummy token to check that the dates are in the same place in both.
-            name_no_date = date.sub('YDYD',base_name)
-            for f2 in keep:
-                if f==f2: continue # don't look at the same file
-                n2 = ''.join(f2.split('/')[-1].split('.')[:-1])
-                p2 = ''.join(f2.split('/')[:-1])
-                # sub or same directory
-                if p2.startswith(path):
-                    nd2 = date.sub('YDYD',n2)
-                    # same proper name
-                    if name_no_date == nd2:
-                        # is older or same
-                        if n2 <= base_name:
-                            keep.remove(f)
-                            delete.append((f2,f))
-                            break
-    # TODO: If two files have the same name but one has more actual spaces
-    # TODO: If two files have the same name except one has a more specific path, keep the deeper one
-    # TODO: If two files have the same stripped name and the second is in an export folder under the first
+        # TODO: If two files have the same stripped name and the second is in an export folder under the first
 
-    # TODO: Add name merging
-    # - keep, delete, new, considered
-    # TODO: if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
-    # TODO: if two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
-    # - we can safely discard the date because the export presumable knows the real date.
+        # TODO: Add name merging
+        # - keep, delete, new, considered
+        # TODO: if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
+        # TODO: if two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
+        # - we can safely discard the date because the export presumable knows the real date.
     return (keep,delete,new)
 
 def filter_groups(duplicates):
