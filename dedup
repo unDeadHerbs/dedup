@@ -1,6 +1,7 @@
 #! /usr/bin/env -S /bin/sh -c "exec \$(dirname \$(realpath "\$0"))/.virtualenv/bin/python -E "\$0" "\$@""
 # Forgive the terrible shebang line, I didn't want to have to wrap this in a script, as the program is so short.
 import os
+import shutil
 import hashlib
 import argparse
 import re
@@ -139,9 +140,28 @@ def filter_files(file_list):
                     break
         # TODO: If two files have the same stripped name and the second is in an export folder under the first
 
-        # TODO: Add name merging
-        # - keep, delete, new, considered
-        # TODO: if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
+        # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
+        for f in keep:
+            base_name = f.split('/')[-1]
+            path = '/'.join(f.split('/')[:-1])
+            if date.search(base_name):
+                # Using a dummy token to check that the dates are in the same place in both.
+                name_no_date = date.sub('YDYD',base_name)
+                for f2 in keep:
+                    if f==f2: continue # don't look at the same file
+                    n2 = f2.split('/')[-1]
+                    p2 = '/'.join(f2.split('/')[:-1])
+                    # sub directory
+                    if p2.startswith(path) and p2 != path:
+                        nd2 = date.sub('YDYD',n2)
+                        # same proper name
+                        if name_no_date == nd2:
+                            # if is newer
+                            if n2 > base_name:
+                                if p2+'/'+base_name not in (keep+delete+new):
+                                    new.append(p2+'/'+base_name)
+                                    changed=True
+                                    break
         # TODO: if two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
         # - we can safely discard the date because the export presumable knows the real date.
     return (keep,delete,new)
@@ -149,9 +169,7 @@ def filter_files(file_list):
 def filter_groups(duplicates):
     count_dups = sum([len(d)>1 for d in duplicates])
     pbar = tqdm(total=count_dups, desc="Filtering ", unit="path")
-    to_delete = []
-    kept = []
-    make=[]
+    groups=[]
     for duplicate_group in duplicates:
         if len(duplicate_group)>1:
             keep, delete, new = filter_files(duplicate_group)
@@ -160,35 +178,38 @@ def filter_groups(duplicates):
                 print("List of paths was:", delete)
                 pbar.update(1)
                 continue
-            to_delete.extend(delete)
-            kept.append(keep)
+            groups.append((keep,delete,new))
             pbar.update(1)
-            make.append((keep,new))
     pbar.close()
-    return (kept,to_delete,make)
+    return groups
 
-def delete_files(files):
-    """
-    Deletes a list of files.
+def manage_files(files):
+    """Move, Delete, and Copy files to match the desired names and locations.
 
-    Args:
-    - files (list): A list of file paths to delete.
+    Takes a list of paths in the format (to keep files, to delete files, to create files).
     """
-    pbar=tqdm(total=len(files), desc="Deleting  ", unit="path")
-    for file_path in files:
-        try:
-            os.remove(file_path)
-        except Exception as e:
-            print(f"Failed to delete {file_path}: {e}")
+    pbar=tqdm(total=len(files), desc="Organizing", unit="path")
+    for keep, delete, new in files:
+        if len(delete+new)==0:
+            continue # nothing to do
+        if len(keep+delete)==0:
+            print("New files asked for with no originals")
+            for n in new:
+                print("-",n)
+            pbar.update(1)
+            continue
+        for del_path, new_path in zip(delete, new):
+            if os.path.exists(del_path[1]) and os.path.exists(os.path.dirname(new_path)):
+                shutil.move(del_path[1], new_path)
+        for del_path in delete:
+            if os.path.exists(del_path[1]):
+                os.remove(del_path[1])
+        template = (keep+new)[0]
+        for new_path in new:
+            if not os.path.exists(new_path):
+                shutil.copyfile(template_path, new_path)
         pbar.update(1)
     pbar.close()
-
-def merge_names(files):
-    """Take a set of file names and find new names that have more information packed into them.
-
-    e.g. The two files `/a/date_c` and `/a/b/c` can become `/a/b/date_c`.
-    """
-    pass
     
 def main():
     parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
@@ -199,18 +220,24 @@ def main():
     folder = args.folder
     pat = args.pattern
     duplicates = find_duplicates(folder,pat)
-    kept, to_delete, to_make = filter_groups(duplicates)
+    groups = filter_groups(duplicates)
+    manage_files(groups)
+
+    # Change Log
+    to_delete = []
+    to_make = [] 
+    for k,d,n in groups:
+        to_delete.extend(d)
+        t=(k+d)[0]
+        to_make.extend([(t,nn) for nn in n])
     if len(to_delete):
-        # TODO: Maybe add an assert here that keep and dell aren't equal?
-        delete_files([dell for keep,dell in to_delete])
         print("Removed",len(to_delete),"file(s)")
         for f in to_delete:
             print("-",f)
-    else:
-        print("Found no files to remove.")
-    for m in to_make:
-        if len(m[1]):
-            print("to make",m)
+    if len(to_make):
+        print("Created",len(to_make),"file(s)")
+        for f in to_make:
+            print("-",f)
 
 if __name__ == "__main__":
     main()
