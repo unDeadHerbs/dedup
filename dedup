@@ -197,6 +197,7 @@ def manage_files(files):
     pbar=tqdm(total=len(files), desc="Organizing", unit="path")
     for keep, delete, new in files:
         if len(delete+new)==0:
+            pbar.update(1)
             continue # nothing to do
         if len(keep+delete)==0:
             print("New files asked for with no originals")
