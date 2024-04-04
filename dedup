@@ -40,6 +40,7 @@ def filter_files(file_list):
     keep=file_list.copy()
     delete=[]
     new=[]
+    considered=[]
     changed=False
 
     def sub_each(pat, sub, s):
@@ -103,13 +104,13 @@ def filter_files(file_list):
         # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
         # TODO: This date filter will expire in 2030, use the actual date to build this check.
         date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
-        for f in keep:
+        for f in keep+new:
             base_name = ''.join(f.split('/')[-1].split('.')[:-1])
             path = ''.join(f.split('/')[:-1])
             if date.search(base_name):
                 # Using a dummy token to check that the dates are in the same place in both.
                 name_no_date = date.sub('YDYD',base_name)
-                for f2 in keep:
+                for f2 in keep+new:
                     if f==f2: continue # don't look at the same file
                     n2 = ''.join(f2.split('/')[-1].split('.')[:-1])
                     p2 = ''.join(f2.split('/')[:-1])
@@ -120,9 +121,14 @@ def filter_files(file_list):
                         if name_no_date == nd2:
                             # is older or same
                             if n2 <= base_name:
-                                keep.remove(f)
-                                delete.append((f2,f))
-                                changed=True
+                                if f in keep:
+                                    keep.remove(f)
+                                    delete.append((f2,f))
+                                    changed=True
+                                if f in new: # TODO: this can be an else if nothing broke
+                                    new.remove(f)
+                                    considered.append((f2,f))
+                                    changed=True
                                 break
         # TODO: If two files have the same name but one has more actual spaces
         # TODO: If two files have the same name except one has a more specific path, keep the deeper one
@@ -173,9 +179,9 @@ def filter_groups(duplicates):
     for duplicate_group in duplicates:
         if len(duplicate_group)>1:
             keep, delete, new = filter_files(duplicate_group)
-            if len(delete) >= len(duplicate_group):
+            if len(keep+new) == 0:
                 print("WARNING: tried to delete everything, skipping")
-                print("List of paths was:", delete)
+                #print("List of paths was:", )
                 pbar.update(1)
                 continue
             groups.append((keep,delete,new))
@@ -228,15 +234,15 @@ def main():
     to_make = [] 
     for k,d,n in groups:
         to_delete.extend(d)
-        t=(k+d)[0]
+        t=(k+[dd[1] for dd in d])[0]
         to_make.extend([(t,nn) for nn in n])
-    if len(to_delete):
-        print("Removed",len(to_delete),"file(s)")
-        for f in to_delete:
-            print("-",f)
     if len(to_make):
         print("Created",len(to_make),"file(s)")
         for f in to_make:
+            print("-",f)
+    if len(to_delete):
+        print("Removed",len(to_delete),"file(s)")
+        for f in to_delete:
             print("-",f)
 
 if __name__ == "__main__":
