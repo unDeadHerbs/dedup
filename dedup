@@ -99,6 +99,7 @@ def filter_files(file_list):
                 create(name_without)
     
     all_nums = re.compile('[-0-9_., ]*$')
+    # TODO: This date filter will expire in 2030, use the actual date to build this check.
     date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
     space_like = re.compile('[-_ ]')
 
@@ -134,7 +135,6 @@ def filter_files(file_list):
                         break
     
         # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
-        # TODO: This date filter will expire in 2030, use the actual date to build this check.
         for f in keep+new:
             base_name = ''.join(f.split('/')[-1].split('.')[:-1])
             path = ''.join(f.split('/')[:-1])
@@ -155,7 +155,7 @@ def filter_files(file_list):
                                 remove(f2,f)
                                 break
         # TODO: If two files have the same name but one has more actual spaces
-        # TODO: If two files have the same name except one has a more specific path, keep the deeper one
+        # If two files have the same name except one has a more specific path, keep the deeper one
         for f in keep+new:
             base_name = f.split('/')[-1]
             path = ''.join(f.split('/')[:-1])
