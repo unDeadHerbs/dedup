@@ -8,6 +8,11 @@ import re
 from tqdm import tqdm
 
 def find_duplicates(folder,pat):
+    # TODO: Maybe cache the hashes?  Rehashing files that haven't
+    # changed is expensive and unhelpful.  The timestamps on the files
+    # are maybe trustworthy, they're good enough for make.  I could
+    # check the remembered hashes of file that are in duplicate
+    # groups, this grantees no extra deletions.
     hash_map = {}
     duplicates = []
 
