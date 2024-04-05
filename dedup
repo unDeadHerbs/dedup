@@ -61,25 +61,48 @@ def filter_files(file_list):
         return generated
     
     def pattern_filter(pat,sub):
-        for f in keep:
+        for f in keep+new:
             patc = re.compile(pat)
             if patc.search(f):
                 names_without = sub_each(pat,sub,f)
                 for n in names_without:
-                    if n in keep:
-                        keep.remove(f)
-                        delete.append((n,f))
-                        changed=True
+                    if n in keep+new:
+                        if f in keep:
+                            keep.remove(f)
+                            delete.append((n,f))
+                        if f in new:
+                            new.remove(f)
+                            considered.append((n,f))
                         break
 
+    def rename_filter(pat,sub):
+        for f in keep+new:
+            patc = re.compile(pat)
+            if patc.search(f):
+                name_without = patc.sub(sub,f)
+                if f in keep:
+                    keep.remove(f)
+                    delete.append((name_without,f))
+                if f in new:
+                    new.remove(f)
+                    considered.append((name_without,f))
+                if not name_without in keep+new:
+                    new.append(name_without)
+                    changed=True
+                    break
+    
     changed=True
     while changed:
         changed = False
-        # If two files have the same name but one contains ' (n)', delete the one containing
+        # If two files have the same name but one contains a number, delete the one containing
         pattern_filter("[1-9][0-9]*",'')
         pattern_filter(" *[0-9]+",'')
-        pattern_filter("[(][0-9]+[)]",'')
-        pattern_filter(" +[(][0-9]+[)]",'')
+        # If it contains a parenthesized number, remove that
+        # TODO: This might damage real file names.  Add an exclusion
+        #   list to this tool.  (It getting it wrong once is fine, since
+        #   the file will just be renamed and documented.)
+        rename_filter("[(][0-9]+[)]",'')
+        rename_filter(" +[(][0-9]+[)]",'')
 
         # If two files have the same name except for numbers, delete the larger number one (lexicographically later)
         for i in range(1,4):
@@ -147,13 +170,13 @@ def filter_files(file_list):
         # TODO: If two files have the same stripped name and the second is in an export folder under the first
 
         # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
-        for f in keep:
+        for f in keep+new:
             base_name = f.split('/')[-1]
             path = '/'.join(f.split('/')[:-1])
             if date.search(base_name):
                 # Using a dummy token to check that the dates are in the same place in both.
                 name_no_date = date.sub('YDYD',base_name)
-                for f2 in keep:
+                for f2 in keep+new:
                     if f==f2: continue # don't look at the same file
                     n2 = f2.split('/')[-1]
                     p2 = '/'.join(f2.split('/')[:-1])
@@ -170,7 +193,7 @@ def filter_files(file_list):
                                     break
         # TODO: if two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
         # - we can safely discard the date because the export presumable knows the real date.
-    return (keep,delete,new)
+    return (keep,delete,new,considered)
 
 def filter_groups(duplicates):
     count_dups = sum([len(d)>1 for d in duplicates])
@@ -178,13 +201,13 @@ def filter_groups(duplicates):
     groups=[]
     for duplicate_group in duplicates:
         if len(duplicate_group)>1:
-            keep, delete, new = filter_files(duplicate_group)
+            keep, delete, new, considered = filter_files(duplicate_group)
             if len(keep+new) == 0:
                 print("WARNING: tried to delete everything, skipping")
                 #print("List of paths was:", )
                 pbar.update(1)
                 continue
-            groups.append((keep,delete,new))
+            groups.append((keep,delete,new,considered))
             pbar.update(1)
     pbar.close()
     return groups
@@ -194,15 +217,16 @@ def manage_files(files):
 
     Takes a list of paths in the format (to keep files, to delete files, to create files).
     """
-    pbar=tqdm(total=len([1 for k,d,n in files if len(d+n)]), desc="Organizing", unit="path")
-    for keep, delete, new in files:
-        if len(delete+new)==0:
-            continue # nothing to do
+    pbar=tqdm(total=len([1 for k,d,n,c in files if len(d+n)]), desc="Organizing", unit="path")
+    for keep, delete, new, consider in files:
+        if len(delete+new)==0: continue # nothing to do
+        if len(keep+new)==0:
+            print("Tried to delete everything")
+            continue 
         if len(keep+delete)==0:
             print("New files asked for with no originals")
             for n in new:
                 print("-",n)
-            pbar.update(1)
             continue
         for del_path, new_path in zip(delete, new):
             if os.path.exists(del_path[1]) and os.path.exists(os.path.dirname(new_path)):
@@ -231,11 +255,13 @@ def main():
 
     # Change Log
     to_delete = []
-    to_make = [] 
-    for k,d,n in groups:
+    to_make = []
+    considered = []
+    for k,d,n,c in groups:
         to_delete.extend(d)
         t=(k+[dd[1] for dd in d])[0]
         to_make.extend([(t,nn) for nn in n])
+        considered.extend(c)
     if len(to_make):
         print("Created",len(to_make),"file(s)")
         for f in to_make:
@@ -243,6 +269,10 @@ def main():
     if len(to_delete):
         print("Removed",len(to_delete),"file(s)")
         for f in to_delete:
+            print("-",f)
+    if len(considered):
+        print("Considered",len(considered),"file(s)")
+        for f in considered:
             print("-",f)
 
 if __name__ == "__main__":
