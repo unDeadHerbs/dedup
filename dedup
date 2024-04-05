@@ -91,6 +91,9 @@ def filter_files(file_list):
                     changed=True
                     break
     
+    all_nums = re.compile('[-0-9_., ]*$')
+    date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
+
     changed=True
     while changed:
         changed = False
@@ -112,7 +115,6 @@ def filter_files(file_list):
         pattern_filter("  ",' ')
 
         # If one file has a name which is all numbers and another has one with text, delete the one with numbers
-        all_nums = re.compile('[-0-9_., ]*$')
         for f in keep:
             base_name = ''.join(f.split('/')[-1].split('.')[:-1])
             if all_nums.match(base_name):
@@ -126,7 +128,6 @@ def filter_files(file_list):
     
         # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
         # TODO: This date filter will expire in 2030, use the actual date to build this check.
-        date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
         for f in keep+new:
             base_name = ''.join(f.split('/')[-1].split('.')[:-1])
             path = ''.join(f.split('/')[:-1])
