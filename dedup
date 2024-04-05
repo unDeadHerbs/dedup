@@ -113,6 +113,7 @@ def filter_files(file_list):
         #   the file will just be renamed and documented.)
         rename_filter("[(][0-9]+[)]",'')
         rename_filter(" +[(][0-9]+[)]",'')
+        # TODO: Remove trailing spaces in file names.  That is "name .mp3" should become "name.mp3".
 
         # If two files have the same name except for numbers, delete the larger number one (lexicographically later)
         for i in range(1,4):
