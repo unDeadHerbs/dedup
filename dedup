@@ -100,6 +100,7 @@ def filter_files(file_list):
     
     all_nums = re.compile('[-0-9_., ]*$')
     date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
+    space_like = re.compile('[-_ ]')
 
     changed=True
     while changed:
@@ -188,8 +189,20 @@ def filter_files(file_list):
                                 if p2+'/'+base_name not in (keep+delete+new):
                                     create(p2+'/'+base_name)
                                     break
-        # TODO: if two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
+        # If two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
         # - we can safely discard the date because the export presumable knows the real date.
+        for f in keep+new:
+            base_name = f.split('/')[-1]
+            path = '/'.join(f.split('/')[:-1])
+            clean_name = space_like.sub('',date.sub('',base_name))
+            if 'export' in path.lower(): continue
+            for f2 in keep+new:
+                if f==f2: continue # don't look at the same file
+                n2 = f2.split('/')[-1]
+                p2 = '/'.join(f2.split('/')[:-1])
+                cn2 = space_like.sub('',date.sub('',n2))
+                if clean_name == cn2 and p2.startswith(path) and 'export' in p2.lower():
+                    remove(f2,f)
     return (keep,delete,new,considered)
 
 def filter_groups(duplicates):
