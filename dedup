@@ -64,6 +64,21 @@ def filter_files(file_list):
                 r=s[:match.start()] + sub(match) + s[match.end():]
             generated.append(r)
         return generated
+
+    def remove(remover,path):
+        if path in keep:
+            keep.remove(path)
+            delete.append((remover,path))
+        if path in new:
+            new.remove(path)
+            considered.append((remover,path))
+
+    def create(path):
+        if not path in keep+new:
+            new.append(path)
+            changed=True
+            return True
+        return False
     
     def pattern_filter(pat,sub):
         for f in keep+new:
@@ -72,12 +87,7 @@ def filter_files(file_list):
                 names_without = sub_each(pat,sub,f)
                 for n in names_without:
                     if n in keep+new:
-                        if f in keep:
-                            keep.remove(f)
-                            delete.append((n,f))
-                        if f in new:
-                            new.remove(f)
-                            considered.append((n,f))
+                        remove(n,f)
                         break
 
     def rename_filter(pat,sub):
@@ -85,16 +95,8 @@ def filter_files(file_list):
             patc = re.compile(pat)
             if patc.search(f):
                 name_without = patc.sub(sub,f)
-                if f in keep:
-                    keep.remove(f)
-                    delete.append((name_without,f))
-                if f in new:
-                    new.remove(f)
-                    considered.append((name_without,f))
-                if not name_without in keep+new:
-                    new.append(name_without)
-                    changed=True
-                    break
+                remove(name_without,f)
+                create(name_without)
     
     all_nums = re.compile('[-0-9_., ]*$')
     date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
@@ -120,15 +122,13 @@ def filter_files(file_list):
         pattern_filter("  ",' ')
 
         # If one file has a name which is all numbers and another has one with text, delete the one with numbers
-        for f in keep:
+        for f in keep+new:
             base_name = ''.join(f.split('/')[-1].split('.')[:-1])
             if all_nums.match(base_name):
-                for f2 in keep:
+                for f2 in keep+new:
                     base_name2 = ''.join(f2.split('/')[-1].split('.')[:-1])
                     if not all_nums.match(base_name2):
-                        keep.remove(f)
-                        delete.append((f2,f))
-                        changed=True
+                        remove(f2,f)
                         break
     
         # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
@@ -150,28 +150,19 @@ def filter_files(file_list):
                         if name_no_date == nd2:
                             # is older or same
                             if n2 <= base_name:
-                                if f in keep:
-                                    keep.remove(f)
-                                    delete.append((f2,f))
-                                    changed=True
-                                if f in new: # TODO: this can be an else if nothing broke
-                                    new.remove(f)
-                                    considered.append((f2,f))
-                                    changed=True
+                                remove(f2,f)
                                 break
         # TODO: If two files have the same name but one has more actual spaces
         # TODO: If two files have the same name except one has a more specific path, keep the deeper one
-        for f in keep:
+        for f in keep+new:
             base_name = f.split('/')[-1]
             path = ''.join(f.split('/')[:-1])
-            for f2 in keep:
+            for f2 in keep+new:
                 if f==f2: continue
                 n2 = f2.split('/')[-1]
                 p2 = ''.join(f2.split('/')[:-1])
                 if base_name == n2 and p2.startswith(path):
-                    keep.remove(f)
-                    delete.append((f2,f))
-                    changed=True
+                    remove(f2,f)
                     break
         # TODO: If two files have the same stripped name and the second is in an export folder under the first
 
@@ -194,8 +185,7 @@ def filter_files(file_list):
                             # if is newer
                             if n2 > base_name:
                                 if p2+'/'+base_name not in (keep+delete+new):
-                                    new.append(p2+'/'+base_name)
-                                    changed=True
+                                    create(p2+'/'+base_name)
                                     break
         # TODO: if two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
         # - we can safely discard the date because the export presumable knows the real date.
