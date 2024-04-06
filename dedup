@@ -75,13 +75,14 @@ def filter_files(file_list):
             considered.append((remover,path))
 
     def create(path):
-        if not path in keep+new:
-            if os.path.exists(path):
-                # Don't try to clobber files
-                considered.append(('preexisting',path))
-            else:
-                new.append(path)
-                changed=True
+        if path in keep+new: return True
+        if os.path.exists(path):
+            # Don't try to clobber files
+            considered.append(('preexisting',path))
+            return False
+        new.append(path)
+        changed=True
+        return True
     
     def pattern_filter(pat,sub):
         patc = re.compile(pat)
@@ -98,8 +99,8 @@ def filter_files(file_list):
         for f in keep+new:
             if patc.search(f):
                 name_without = patc.sub(sub,f)
-                remove(name_without,f)
-                create(name_without)
+                if create(name_without):
+                    remove(name_without,f)
     
     all_nums = re.compile('[-0-9_., ]*$')
     # TODO: This date filter will expire in 2030, use the actual date to build this check.
