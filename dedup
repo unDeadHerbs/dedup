@@ -288,6 +288,7 @@ def main():
         t=(k+[dd[1] for dd in d])[0]
         to_make.extend([(t,nn) for nn in n])
         considered.extend(c)
+    considered = [c for c in considered if c[0]!='preexisting']
     if len(to_make):
         print("Created",len(to_make),"file(s)")
         for f in to_make:
