@@ -76,6 +76,7 @@ def filter_files(file_list):
 
     def create(path):
         if not path in keep+new:
+            # TODO: Don't try to clobber files
             new.append(path)
             changed=True
     
@@ -132,6 +133,7 @@ def filter_files(file_list):
                     if not all_nums.match(base_name2):
                         remove(f2,f)
                         break
+        # TODO: If a file has a "bad" name (e.g. "audio.mp3") don't keep it if there is a better named file.
     
         # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
         for f in keep+new:
