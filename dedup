@@ -262,11 +262,13 @@ def manage_files(files):
 def main():
     parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
     default_file_types = [
-        'mp3',
-        'm4a',
         'flac',
-        'opus',
+        'jpg',
+        'm4a',
         'ogg',
+        'opus',
+        'png',
+        'mp3',
     ]
     file_type_pat = '('+'|'.join(default_file_types)+')$'
     parser.add_argument('pattern', nargs='?', default=file_type_pat, help='only look at files containing the pattern')
