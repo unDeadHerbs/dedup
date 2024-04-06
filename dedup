@@ -54,6 +54,7 @@ def filter_files(file_list):
         string (non-recursive).
 
         """
+        # TODO: Write some doc tests for this, I think it's wrong
         patc=re.compile(pat)
         matches=patc.finditer(s)
         generated=[]
@@ -77,12 +78,10 @@ def filter_files(file_list):
         if not path in keep+new:
             new.append(path)
             changed=True
-            return True
-        return False
     
     def pattern_filter(pat,sub):
+        patc = re.compile(pat)
         for f in keep+new:
-            patc = re.compile(pat)
             if patc.search(f):
                 names_without = sub_each(pat,sub,f)
                 for n in names_without:
@@ -91,8 +90,8 @@ def filter_files(file_list):
                         break
 
     def rename_filter(pat,sub):
+        patc = re.compile(pat)
         for f in keep+new:
-            patc = re.compile(pat)
             if patc.search(f):
                 name_without = patc.sub(sub,f)
                 remove(name_without,f)
@@ -203,6 +202,7 @@ def filter_files(file_list):
                 cn2 = space_like.sub('',date.sub('',n2))
                 if clean_name == cn2 and p2.startswith(path) and 'export' in p2.lower():
                     remove(f2,f)
+                    break
     return (keep,delete,new,considered)
 
 def filter_groups(duplicates):
