@@ -76,9 +76,12 @@ def filter_files(file_list):
 
     def create(path):
         if not path in keep+new:
-            # TODO: Don't try to clobber files
-            new.append(path)
-            changed=True
+            if os.path.exists(path):
+                # Don't try to clobber files
+                considered.append(('preexisting',path))
+            else:
+                new.append(path)
+                changed=True
     
     def pattern_filter(pat,sub):
         patc = re.compile(pat)
