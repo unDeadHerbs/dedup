@@ -247,7 +247,7 @@ def manage_files(files):
         template = (keep+new)[0]
         for new_path in new:
             if not os.path.exists(new_path):
-                shutil.copyfile(template_path, new_path)
+                shutil.copyfile(template, new_path)
         pbar.update(1)
     pbar.close()
     
