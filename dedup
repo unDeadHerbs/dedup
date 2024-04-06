@@ -266,6 +266,7 @@ def main():
         'm4a',
         'flac',
         'opus',
+        'ogg',
     ]
     file_type_pat = '('+'|'.join(default_file_types)+')$'
     parser.add_argument('pattern', nargs='?', default=file_type_pat, help='only look at files containing the pattern')
