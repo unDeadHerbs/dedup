@@ -79,6 +79,7 @@ def filter_files(file_list):
         if os.path.exists(path):
             # Don't try to clobber files
             considered.append(('preexisting',path))
+            # TODO: Also track names created
             return False
         new.append(path)
         changed=True
