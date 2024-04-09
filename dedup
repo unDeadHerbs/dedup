@@ -75,7 +75,7 @@ def filter_files(file_list):
             considered.append((remover,path))
 
     def create(path):
-        if path in keep+new: return True
+        if path in keep+delete+new+considered: return True
         if os.path.exists(path):
             # Don't try to clobber files
             considered.append(('preexisting',path))
