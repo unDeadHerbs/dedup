@@ -130,7 +130,7 @@ def filter_files(file_list):
         # Remove leading spaces in file names.
         rename_filter('^'+space_like_pat,'')
 
-        # If two files have the same name except for numbers, delete the larger number one (lexicographically later)
+        # If two files have the same name except for a number, delete the one with the larger number
         for i in range(1,4):
             pattern_filter("[0-9]+",lambda n:str(int(n.group(0))-i))
 
@@ -169,6 +169,7 @@ def filter_files(file_list):
                                 remove(f2,f)
                                 break
         # TODO: If two files have the same name but one has more actual spaces
+
         # If two files have the same name except one has a more specific path, keep the deeper one
         for f in keep+new:
             base_name = f.split('/')[-1]
@@ -206,10 +207,10 @@ def filter_files(file_list):
         # If two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
         # - we can safely discard the date because the export presumable knows the real date.
         for f in keep+new:
-            base_name = f.split('/')[-1]
             path = '/'.join(f.split('/')[:-1])
-            clean_name = space_like.sub('',date.sub('',base_name))
             if 'export' in path.lower(): continue
+            base_name = f.split('/')[-1]
+            clean_name = space_like.sub('',date.sub('',base_name))
             for f2 in keep+new:
                 if f==f2: continue # don't look at the same file
                 n2 = f2.split('/')[-1]
