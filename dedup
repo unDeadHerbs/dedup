@@ -99,10 +99,13 @@ def filter_files(file_list):
     def rename_filter(pat,sub):
         patc = re.compile(pat)
         for f in keep+new:
-            if patc.search(f):
-                name_without = patc.sub(sub,f)
-                if create(name_without):
-                    remove(name_without,f)
+            base_name = f.split('/')[-1]
+            path = '/'.join(f.split('/')[:-1])
+            if patc.search(base_name):
+                name_without = patc.sub(sub,base_name)
+                full_without = path+'/'+name_without
+                if create(full_without):
+                    remove(full_without,f)
     
     all_nums = re.compile('[-0-9_., ]*$')
     # TODO: This date filter will expire in 2030, use the actual date to build this check.
