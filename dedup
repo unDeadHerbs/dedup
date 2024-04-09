@@ -110,7 +110,8 @@ def filter_files(file_list):
     all_nums = re.compile('[-0-9_., ]*$')
     # TODO: This date filter will expire in 2030, use the actual date to build this check.
     date = re.compile('(19[7-9]|20[012])[0-9][-_](0[1-9]|1[012])[-_](0[1-9]|[12][0-9]|3[0-1])')
-    space_like = re.compile('[-_ ]')
+    space_like_pat = '[-—_ ]'
+    space_like = re.compile(space_like_pat)
 
     changed=True
     while changed:
