@@ -82,6 +82,7 @@ def filter_files(file_list):
             # TODO: Also track names created
             return False
         new.append(path)
+        nonlocal changed
         changed=True
         return True
     
