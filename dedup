@@ -181,7 +181,6 @@ def filter_files(file_list):
                 if base_name == n2 and p2.startswith(path):
                     remove(f2,f)
                     break
-        # TODO: If two files have the same stripped name and the second is in an export folder under the first
 
         # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
         for f in keep+new:
