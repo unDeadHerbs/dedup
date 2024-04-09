@@ -182,6 +182,18 @@ def filter_files(file_list):
                     remove(f2,f)
                     break
 
+        # If a file's name is a subset of another in the same directory, delete the less specific one
+        for f in keep+new:
+            base_name = f.split('/')[-1]
+            path = ''.join(f.split('/')[:-1])
+            for f2 in keep+new:
+                if f==f2: continue
+                n2 = f2.split('/')[-1]
+                p2 = ''.join(f2.split('/')[:-1])
+                if base_name in n2 and path == p2:
+                    remove(f2,f)
+                    break
+                
         # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
         for f in keep+new:
             base_name = f.split('/')[-1]
