@@ -230,6 +230,22 @@ def filter_files(file_list):
                 if clean_name == cn2 and p2.startswith(path) and 'export' in p2.lower():
                     remove(f2,f)
                     break
+
+        # If `/a/d-c.type` and `/a/b/c.type` then `/a/b/d-c.type`
+        # - If `d` contains both a date and other things, exclude the date
+        for f in keep+new:
+            path = '/'.join(f.split('/')[:-1])
+            if 'export' in path.lower(): continue
+            base_name = f.split('/')[-1]
+            clean_name = date.sub('',base_name)
+            for f2 in keep+new:
+                if f==f2: continue # don't look at the same file
+                n2 = f2.split('/')[-1]
+                p2 = '/'.join(f2.split('/')[:-1])
+                cn2 = date.sub('',n2)
+                if cn2 in clean_name and not cn2 == clean_name:
+                    create(p2+'/'+clean_name)
+                    break
     return (keep,delete,new,considered)
 
 def filter_groups(duplicates):
