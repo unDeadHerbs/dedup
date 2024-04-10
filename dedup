@@ -168,7 +168,20 @@ def filter_files(file_list):
                             if n2 <= base_name:
                                 remove(f2,f)
                                 break
+
         # TODO: If two files have the same name but one has more actual spaces
+        for f in keep+new:
+            base_name = f.split('/')[-1]
+            path = ''.join(f.split('/')[:-1])
+            raw_name = space_like.sub('',base_name)
+            for f2 in keep+new:
+                if f==f2: continue
+                n2 = f2.split('/')[-1]
+                p2 = ''.join(f2.split('/')[:-1])
+                rn2 = space_like.sub('',n2)
+                if path == p2 and raw_name == rn2 and len(base_name) < len(n2):
+                    remove(f2,f)
+                    break
 
         # If two files have the same name except one has a more specific path, keep the deeper one
         for f in keep+new:
