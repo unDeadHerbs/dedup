@@ -326,6 +326,7 @@ def manage_files(files):
 def main():
     parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
     default_file_types = [
+        'aac',
         'flac',
         'jpg',
         'm4a',
