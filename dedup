@@ -1,5 +1,5 @@
 #! /usr/bin/env -S /bin/sh -c "exec \$(dirname \$(realpath "\$0"))/.virtualenv/bin/python -E "\$0" "\$@""
-# Forgive the terrible shebang line, I didn't want to have to wrap this in a script, as the program is so short.
+# Forgive the terrible shebang line, I need the venv but didn't want to wrap it in a shell script
 import os
 import shutil
 import hashlib
@@ -130,8 +130,8 @@ def filter_files(file_list):
         # TODO: This might damage real file names.  Add an exclusion
         #   list to this tool.  (It getting it wrong once is fine, since
         #   the file will just be renamed and documented.)
-        rename_filter(" +[(][0-9]+[)]",'')
-        rename_filter("(?<! )[(][0-9]+[)]",'')
+        rename_filter("[ _][(][0-9]+[)]",'')
+        rename_filter("(?<![ _])[(][0-9]+[)]",'')
         # Remove trailing spaces in file names.  That is "name .mp3" should become "name.mp3".
         rename_filter(space_like_pat+'([.][^.]*)$',lambda m:m.group(1))
         # Remove leading spaces in file names.
@@ -153,74 +153,64 @@ def filter_files(file_list):
                     if not all_nums.match(base_name2):
                         remove(f2,f)
                         break
+                    
         # TODO: If a file has a "bad" name (e.g. "audio.mp3") don't keep it if there is a better named file.
     
         # If two have the same proper name but one is both in a sub directory and has an older date, remove newer
         for f in keep+new:
-            base_name = ''.join(f.split('/')[-1].split('.')[:-1])
+            name_ext = f.split('/')[-1]
+            name = ''.join(name_ext.split('.')[:-1])
             path = ''.join(f.split('/')[:-1])
-            if date.search(base_name):
+            has_date = date.search(name)
+            if has_date:
                 # Using a dummy token to check that the dates are in the same place in both.
-                name_no_date = date.sub('YDYD',base_name)
+                name_blank_date = date.sub('YDYD',name)
                 for f2 in keep+new:
                     if f==f2: continue # don't look at the same file
                     n2 = ''.join(f2.split('/')[-1].split('.')[:-1])
                     p2 = ''.join(f2.split('/')[:-1])
                     # sub or same directory
                     if p2.startswith(path):
-                        nd2 = date.sub('YDYD',n2)
+                        nbd2 = date.sub('YDYD',n2)
                         # same proper name
-                        if name_no_date == nd2:
+                        if name_blank_date == nbd2:
                             # is older or same
-                            if n2 <= base_name:
+                            if n2 <= name:
                                 remove(f2,f)
                                 break
 
-        # TODO: If two files have the same name but one has more actual spaces
-        for f in keep+new:
-            base_name = f.split('/')[-1]
-            path = ''.join(f.split('/')[:-1])
-            raw_name = meaningless.sub('',base_name)
+            # TODO: If two files have the same name but one has more actual spaces
+            compressed_name = meaningless.sub('',name_ext)
             for f2 in keep+new:
                 if f==f2: continue
                 n2 = f2.split('/')[-1]
                 p2 = ''.join(f2.split('/')[:-1])
-                rn2 = meaningless.sub('',n2)
-                if path == p2 and raw_name == rn2 and len(base_name) < len(n2):
+                cn2 = meaningless.sub('',n2)
+                if path == p2 and compressed_name == cn2 and len(name_ext) < len(n2):
                     remove(f2,f)
                     break
 
-        # If two files have the same name except one has a more specific path, keep the deeper one
-        for f in keep+new:
-            base_name = f.split('/')[-1]
-            path = ''.join(f.split('/')[:-1])
+            # If two files have the same name except one has a more specific path, keep the deeper one
             for f2 in keep+new:
                 if f==f2: continue
                 n2 = f2.split('/')[-1]
                 p2 = ''.join(f2.split('/')[:-1])
-                if base_name == n2 and p2.startswith(path):
+                if name_ext == n2 and p2.startswith(path):
                     remove(f2,f)
                     break
 
-        # If a file's name is a subset of another in the same directory, delete the less specific one
-        for f in keep+new:
-            base_name = f.split('/')[-1]
-            path = ''.join(f.split('/')[:-1])
+            # If a file's name is a subset of another in the same directory, delete the less specific one
             for f2 in keep+new:
                 if f==f2: continue
                 n2 = f2.split('/')[-1]
                 p2 = ''.join(f2.split('/')[:-1])
-                if base_name in n2 and path == p2:
+                if name_ext in n2 and path == p2:
                     remove(f2,f)
                     break
                 
-        # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
-        for f in keep+new:
-            base_name = f.split('/')[-1]
-            path = '/'.join(f.split('/')[:-1])
-            if date.search(base_name):
+            # if /path/date_1-name and /path/sub_path/date_2-name and date_2 is after date_1, move date_1 to the sub_path
+            if has_date:
                 # Using a dummy token to check that the dates are in the same place in both.
-                name_no_date = date.sub('YDYD',base_name)
                 for f2 in keep+new:
                     if f==f2: continue # don't look at the same file
                     n2 = f2.split('/')[-1]
@@ -229,49 +219,41 @@ def filter_files(file_list):
                     if p2.startswith(path) and p2 != path:
                         nd2 = date.sub('YDYD',n2)
                         # same proper name
-                        if name_no_date == nd2:
+                        if name_blank_date == nd2:
                             # if is newer
-                            if n2 > base_name:
-                                if p2+'/'+base_name not in (keep+delete+new):
-                                    create(p2+'/'+base_name)
+                            if n2 > name_ext:
+                                if p2+'/'+name_ext not in (keep+delete+new):
+                                    create(p2+'/'+name_ext)
                                     break
-        # If two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
-        # - we can safely discard the date because the export presumable knows the real date.
-        for f in keep+new:
-            path = '/'.join(f.split('/')[:-1])
-            if 'export' in path.lower(): continue
-            base_name = f.split('/')[-1]
-            clean_name = space_like.sub('',date.sub('',base_name))
-            for f2 in keep+new:
-                if f==f2: continue # don't look at the same file
-                n2 = f2.split('/')[-1]
-                p2 = '/'.join(f2.split('/')[:-1])
-                cn2 = space_like.sub('',date.sub('',n2))
-                if clean_name == cn2 and p2.startswith(path) and 'export' in p2.lower():
-                    remove(f2,f)
-                    break
+                                
+            # If two files have the same base name (ignoring date and symbols) and one is in an export directory under the other, delete the non-export one
+            # - we can safely discard the date because the export presumable knows the real date.
+            if not 'export' in path.lower():
+                clean_name = space_like.sub('',date.sub('',base_name))
+                for f2 in keep+new:
+                    if f==f2: continue # don't look at the same file
+                    n2 = f2.split('/')[-1]
+                    p2 = '/'.join(f2.split('/')[:-1])
+                    cn2 = space_like.sub('',date.sub('',n2))
+                    if clean_name == cn2 and p2.startswith(path) and 'export' in p2.lower():
+                        remove(f2,f)
+                        break
 
-        # If `/a/d-c.type` and `/a/b/c.type` then `/a/b/d-c.type`
-        # - If `d` contains both a date and other things, exclude the date
-        for f in keep+new:
-            path = '/'.join(f.split('/')[:-1])
-            if 'export' in path.lower(): continue
-            base_name = f.split('/')[-1]
-            clean_name = date.sub('',base_name)
-            for f2 in keep+new:
-                if f==f2: continue # don't look at the same file
-                n2 = f2.split('/')[-1]
-                p2 = '/'.join(f2.split('/')[:-1])
-                cn2 = date.sub('',n2)
-                if cn2 in clean_name and not cn2 == clean_name and p2.startswith(path):
-                    create(p2+'/'+clean_name)
-                    break
+            # If `/a/d-c.type` and `/a/b/c.type` then `/a/b/d-c.type`
+            # - If `d` contains both a date and other things, exclude the date
+            if not 'export' in path.lower():
+                clean_name = date.sub('',name_ext)
+                for f2 in keep+new:
+                    if f==f2: continue # don't look at the same file
+                    n2 = f2.split('/')[-1]
+                    p2 = '/'.join(f2.split('/')[:-1])
+                    cn2 = date.sub('',n2)
+                    if cn2 in clean_name and not cn2 == clean_name and p2.startswith(path):
+                        create(p2+'/'+clean_name)
+                        break
 
-        # If a file's name is a subset of another, keep the larger
-        for f in keep+new:
-            path = '/'.join(f.split('/')[:-1])
-            base_name = '.'.join(f.split('/')[-1].split('.')[:-1])
-            clean_name = meaningless.sub('',base_name)
+            # If a file's name is a subset of another, keep the larger
+            clean_name = meaningless.sub('',name_ext)
             for f2 in keep+new:
                 if f==f2: continue # don't look at the same file
                 p2 = '/'.join(f2.split('/')[:-1])
@@ -281,24 +263,27 @@ def filter_files(file_list):
                 if clean_name in cn2 and not clean_name == cn2:
                     remove(f2,f)
                     break
+
+
+        # TODO: `/a/b/c.type` and `/a/b-copy/c.type` should remove the copy
+        # TODO: `/c - hash1.type` and `/c - hash2.type` should remove the second
+        # TODO: `/c-unix-date1.type` and `/c-unix-date2.type` should remove the second
     return (keep,delete,new,considered)
 
-def filter_groups(duplicates):
-    count_dups = sum([len(d)>1 for d in duplicates])
-    pbar = tqdm(total=count_dups, desc="Filtering ", unit="path")
-    groups=[]
-    for duplicate_group in duplicates:
-        if len(duplicate_group)>1:
-            keep, delete, new, considered = filter_files(duplicate_group)
-            if len(keep+new) == 0:
-                print("WARNING: tried to delete everything, skipping")
-                #print("List of paths was:", )
-                pbar.update(1)
-                continue
-            groups.append((keep,delete,new,considered))
+def filter_groups(groups):
+    pbar = tqdm(total=len(groups), desc="Filtering ", unit="path")
+    f_groups=[]
+    for group in groups:
+        keep, delete, new, considered = filter_files(group)
+        if len(keep+new) == 0:
+            print("WARNING: tried to delete everything, skipping")
+            #print("List of paths was:", )
             pbar.update(1)
+            continue
+        f_groups.append((keep,delete,new,considered))
+        pbar.update(1)
     pbar.close()
-    return groups
+    return f_groups
 
 def manage_files(files):
     """Move, Delete, and Copy files to match the desired names and locations.
@@ -310,7 +295,7 @@ def manage_files(files):
         if len(delete+new)==0: continue # nothing to do
         if len(keep+new)==0:
             print("Tried to delete everything")
-            continue 
+            continue
         if len(keep+delete)==0:
             print("New files asked for with no originals")
             for n in new:
@@ -350,8 +335,8 @@ def main():
     pat = args.pattern
     duplicates = find_duplicates(folder,pat)
     groups = filter_groups(duplicates)
-    manage_files(groups)
-
+    #manage_files(groups)
+    
     # Change Log
     to_delete = []
     to_make = []

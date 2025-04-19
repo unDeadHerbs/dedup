@@ -1,0 +1,155 @@
+#! /usr/bin/env -S /bin/sh -c "exec \$(dirname \$(realpath "\$0"))/.virtualenv/bin/python -E "\$0" "\$@""
+# Forgive the terrible shebang line, I need the venv but didn't want to wrap it in a shell script
+import os
+import shutil
+import hashlib
+import argparse
+import re
+import contextlib
+from tqdm import tqdm
+from collections import defaultdict
+
+def find_duplicates(folder,file_pat):
+    """
+    1. list all files
+    2. group them by file size
+    3. if a size has multiple files in it
+       - group by the first block
+    4. if a size+block group has multiple files in it
+       - hash each
+    5. If a size+block+hash group has multiple files in it
+    6. Actually check that they are duplicates
+    """
+
+    ##
+    # 1. list all files
+    ##
+    files = [os.path.join(root, fil)
+             for root, dirs, files in tqdm(os.walk(folder),desc="Scanning    ",unit=" folders")
+             for fil in files
+             if file_pat.search(fil)]
+
+    ##
+    # 2. group them by file size
+    ##
+    by_size = defaultdict(list)
+    for fil in tqdm(files, desc="Listing     ", unit="file"):
+        if not os.path.isfile(fil): continue
+        file_size = os.path.getsize(fil)
+        by_size[file_size].append(fil)
+
+    # TODO: Eject the empty files unless asked not to.
+    # By default they should be ignored
+    # Secondarily, they should be considered distinct
+    # Third option is to consider them all the same
+    if 0 in by_size:
+        del by_size[0]
+
+    ##
+    # 3.1. If a size group only has one block in it
+    #      - Just Yeild
+    ##
+    sizes_only_one_block = [sg for sg in by_size if len(by_size[sg])<2]
+    sizes_at_least_two = [sg for sg in by_size if len(by_size[sg])>=2]
+    for size in sizes_only_one_block:
+        yield by_size[size]
+
+    ##
+    # 3. if a size has multiple files in it
+    #    - group by the first block
+    ##
+    BLOCK_SIZE=256
+    SAFE_RAM=2048
+    sizes_at_least_two.sort()
+    #sizes_at_least_two.reverse()
+    # Does larger or smaller files first save the space the fastest?
+    # If there's an interactive system watching, smalest first will populate the list faster
+    # If we expect assume that every block has an equal change of being any block, then smaller files first will save space faster
+    # because we're reading blocks as fast as possible, so the smaller the files, the faster we can eject them to the processing stage
+    # all of this doesn't really matter because python is still single threaded
+    file_count = sum(len(by_size[s]) for s in sizes_at_least_two)
+    by_size_pb = tqdm(total=file_count,desc="Pre Hashing ",unit="files")
+    by_size_pb2 = tqdm(total=file_count,desc="Hashing     ",unit="files") # TODO: estimate bytes to hash rather than files?
+    for size in sizes_at_least_two:
+        size_files = by_size[size]
+        by_size_block = defaultdict(list)
+        gen_hash = lambda f: hashlib.sha256(f.read(BLOCK_SIZE)).hexdigest()
+        if 256*len(size_files) <= SAFE_RAM:
+            gen_hash = lambda f: f.read(BLOCK_SIZE)
+            # There's a small enough number of files, don't bother hashing
+        for fil in size_files:
+            with open(fil,'rb') as f:
+                block_hash = gen_hash(f)
+                by_size_block[block_hash].append(fil)
+            by_size_pb.update(1)
+
+
+        ##
+        # 4.1. If the size+block group has one file in it
+        #      - Just Yeild
+        ##
+        only_one_block = [bh for bh in by_size_block if len(by_size_block[bh])<2]
+        for block_hash in only_one_block:
+            block_files = by_size_block[block_hash]
+            yield block_files
+        by_size_pb2.total-=sum([len(by_size_block[bh]) for bh in only_one_block])
+        by_size_pb2.update(0)
+
+        by_size_block_at_least_two = [bh for bh in by_size_block if len(by_size_block[bh])>=2]
+        ##
+        # 4. if a size+block group has multiple files in it
+        #    - hash each
+        ##
+        # Thinking about a new version of this
+        # - list of lists of file handles
+        # - take first list
+        # - read one block out of each
+        for block_hash in by_size_block_at_least_two:
+            block_files = by_size_block[block_hash]
+            by_size_hash = defaultdict(list)
+            for fil in block_files:
+                with open(fil,'rb') as f:
+                    file_hash = hashlib.sha256(f.read()).hexdigest()
+                    by_size_hash[(size,file_hash)].append(fil)
+                    by_size_pb2.update(1)
+
+            ##
+            # 5. If a size+block+hash group has multiple files in it
+            #    - run the rules over the group to decide what to do
+            ##
+            for file_hash in by_size_hash:
+                hash_files=by_size_hash[file_hash]
+                if len(hash_files)<2:
+                    yield hash_files
+                    continue
+                ## TODO
+                # 6. Actually check that they are duplicates
+                # - If there are less than maybe 10 files at level 4,
+                #   we can skip the hash filter, as just comparing the
+                #   files directly will be faster?  That might be true
+                #   no matter how many files there are.  Just keep
+                #   reading a block out of each and split them based
+                #   on if it's the same.
+                ##
+                yield hash_files
+
+def process_duplicate_set(files):
+    print(files)
+    #print(len(files))
+
+def main():
+    parser = argparse.ArgumentParser(description='Find and intelligently delete duplicate files in a folder.')
+    parser.add_argument('pattern', nargs='?', default='', help='only look at files containing the pattern')
+    parser.add_argument('folder', nargs='?', default=os.getcwd(), help='folder to search for duplicates (default: current directory)')
+    args = parser.parse_args()
+
+    for file_set in find_duplicates(args.folder,re.compile(args.pattern)):
+        ## TODO
+        # If name cleanup changes are asked for, also list
+        # non-duplicate file sets and perform name update patterns
+        ##
+        if len(file_set)>1:
+            process_duplicate_set(file_set)
+
+if __name__ == "__main__":
+    main()
